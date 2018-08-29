@@ -26,9 +26,30 @@ class node:
         for i,w in enumerate(self.n):
             soma+=nod[w].z
         soma=beta*soma*dt
-        self.z=+noise*(np.random.normal(0,.1)+np.random.normal(0,.1)*1.j)*math.sqrt(dt)+soma/(N-1.)
-        
-#Constructing connection network
+        self.z+=noise*(np.random.normal(0,1.)+np.random.normal(0,1.)*1.j)*math.sqrt(dt)+soma/(N-1.)
+
+#Function to plot covariance and average histogram (set printhisto=1)
+
+def histograma(abscov,absav,count):
+    axs[0][count].hist(abscov,bins=40, range=[0,1],label=str(p), stacked=True, fill=False)
+    axs[0][count].set_title(str(p))
+    axs[1][count].hist(absav,bins=40, range=[0,1], stacked=True, fill=False)
+    axs[1][count].set_title(str(p))
+    if(count==2):
+        title="Correlation " + "N=" + str(N) + " T="+str(T) + "(up)" + "        Averages (down)"
+        m.suptitle(title)
+    return axs
+
+# Function to plot nodes neighbor list (set printnet=1)
+
+def netprint(node_neigh_list):
+    for i,w in enumerate(node_neigh_list):
+        rede.write("{:d} - ".format(i))
+        for j in w:
+            rede.write("{:d} ".format(j))
+        rede.write("\n")
+               
+# Here starts the main program       
 global a,b,beta,c,dt,noise,N
 a=-1
 b=2.
@@ -38,18 +59,23 @@ beta=1.4
 dt=0.01
 noise=0.04
 N=20
-T=100
+T=50
 Nij=N*(N-1)/2
-
+printhisto=1 #set to 1 to print the histogram
+printnet=1 #set to 1 to print the nodes neighbor list
 fig, axs = m.subplots(nrows=2,ncols=6)
-
+saida=open("z6.out","w")
+saida.write("#p, cor. media, desvio cor. media, ictogenicity \n")
+rede=open("z6-net.out","w")
 count=0
 for p in [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
+    print 'p=',p
+    rede.write("p= {:f}\n".format(p))
 #    bo=5
 #    bth=2*math.sqrt(a*c)
 #    tau=1000
 #    zo=-0.5*bth/a
-
+#Constructing connection network
     g=nx.Graph()
     g.add_node(0)
     g.add_node(1)
@@ -63,9 +89,11 @@ for p in [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
             list_neigh.append(j)
         node_neigh_list.append(list_neigh)
 
-
+    if(printnet==1):
+        netprint(node_neigh_list)
+                       
     #initialize N nodes
-    nod=list(node(np.random.normal(0,1.)+np.random.normal(0,1.)*1.j, np.random.uniform(-0.2,0.2), node_neigh_list[i]) for i in range(N))
+    nod=list(node(np.random.normal(0,.1)+np.random.normal(0,.1)*1.j, np.random.uniform(-0.2,0.2), node_neigh_list[i]) for i in range(N))
 
     #Node evolution
     t=0
@@ -82,6 +110,7 @@ for p in [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
             print "t=",int(t)
         map(lambda i:i.fut(), nod)
         map(lambda i:i.mov(), nod)
+
         #    x.append(t)
         k=0
         for i in range(N):
@@ -100,24 +129,17 @@ for p in [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
     abscov=map(lambda i:abs(i)/T, cov)
     absav=map(lambda i:abs(i)*dt/T, avphi)
     avicto=avicto*dt/T/N
-#    fmax=max(abscov)
-#    fmin=min(abscov)
-#    axs[0][count].hist(abscov,bins=40, range=[0,1],label=str(p), stacked=True, fill=False)
-#    axs[0][count].set_title(str(p))
-#    axs[1][count].hist(absav,bins=40, range=[0,1], stacked=True, fill=False)
-#    axs[1][count].set_title(str(p))
-#    if(count==2):
-#    title="Correlation " + "N=" + str(N) + " T="+str(T) + "(up)" + "        Averages (down)"
-#    m.suptitle(title)
+    if(printhisto==1):
+        histograma(abscov,absav,count)
+        count+=1
 
-    count+=1
     avabscov=sum(abscov)/Nij
     desvio_correlacao=sum(map(lambda i:(i-avabscov)**2, abscov))/Nij
-    print "p, cor. media, desvio cor. media, ictogenicity = ", p, avabscov, desvio_correlacao, avicto
-    #Graph
+    saida.write('{:f} {:f} {:f} {:f}\n'.format(p,avabscov,desvio_correlacao,avicto)) 
+#Graph
 #    m.subplot(2,1,1)
-#    m.plot(x,b)
-#m.subplot(2,1,2)
+#m.plot(x,b)
+#    m.subplot(2,1,2)
 #m.plot(x,abscov)
 m.show()    
 
